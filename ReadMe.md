@@ -1,13 +1,61 @@
 # KQL Investigation Queries
-This document contains KQL queries for SOC Sentinel investigation purposes. These prompts can be copied and pasted directly into Sentinel, with "KeyArtifact" replaced by the appropriate search term relevant to your investigation. These queries come without tables attached.
 
-## List Tables
+This document contains KQL queries for SOC Sentinel investigation purposes. These prompts can be copied and pasted directly into Sentinel, with "KeyArtifact" replaced by the appropriate search term relevant to your investigation. The queries come without attached tables unless specified.
+
+---
+
+## Introduction
+
+Kusto Query Language (KQL) is the language used across Azure Monitor, Azure Data Explorer, and Azure Log Analytics (which Microsoft Sentinel uses under the hood). I have always found the following visualization regarding KQL useful:
+
+> _We use KQL to create accurate and efficient queries to identify threats, detections, patterns, and anomalies within our large datasets._
+
+---
+
+## Anatomy of a KQL Query
+
+![image](https://github.com/user-attachments/assets/7d3ad46a-d0d9-4609-be16-a21fcc9bf070)
+
+
+Below is an example of a basic KQL query:
+
 ```KQL
-search "*" 
+SigninLogs
+| where TimeGenerated > ago(14d)
+| where UserPrincipalName == "reprise_99@testdomain.com"
+| where ResultType == "0"
+| where AppDisplayName == "Microsoft Teams"
+| project TimeGenerated, Location, IPAddress, UserAgent
+```
+
+### Breakdown:
+- **`SigninLogs`**: Specifies the table in which to search (e.g., Azure AD sign-in logs).
+- **`where TimeGenerated > ago(14d)`**: Filters events from the last 14 days.
+- **`where UserPrincipalName == "reprise_99@testdomain.com"`**: Narrows down to specific user activity.
+- **`where ResultType == "0"`**: Limits to successful logins (ResultType "0").
+- **`where AppDisplayName == "Microsoft Teams"`**: Focuses on sign-ins specifically to Microsoft Teams.
+- **`project TimeGenerated, Location, IPAddress, UserAgent`**: Selects only relevant columns for the results.
+
+Now, let's explore some other useful KQL queries for SOC investigations.
+
+---
+
+## Queries
+
+### List All Tables
+
+This query lists all tables and the number of events in each one.
+
+```KQL
+search "*"
 | summarize count() by $table
 | sort by count_ desc
 ```
-## Precise List Tables
+
+### Precise List of Tables by Keyword
+
+This query returns tables related to a specific keyword (`KeyArtifact`).
+
 ```KQL
 search "*"
 | where $table has "KeyArtifact"
@@ -15,7 +63,10 @@ search "*"
 | sort by count_ desc
 ```
 
-## Phishing Pivot
+### Phishing Pivot (Last 7 Days)
+
+This query pivots on phishing alerts, filtering the results for the past 7 days and a specific artifact.
+
 ```KQL
 | where AlertName has "phishing"
 | where TimeGenerated >= ago(7d)
@@ -23,7 +74,11 @@ search "*"
 | where KeyArtifact == "<YourKeyArtifactValue>"
 | summarize count() by KeyArtifact
 ```
-## Threat IP Pivot
+
+### Threat IP Pivot (Last 30 Days)
+
+This query tracks the prevalence of a threat IP in the environment over the past 30 days.
+
 ```KQL
 | where TimeGenerated >= ago(30d)
 | extend KeyArtifact = parse_json(Entities)[0].KeyArtifact
@@ -31,7 +86,10 @@ search "*"
 | summarize count() by KeyArtifact
 ```
 
-## Detailed Key Artifact Table
+### Detailed Key Artifact Table
+
+This query retrieves detailed metadata for a given artifact and organizes the results into a readable table.
+
 ```KQL
 | where Entities has "KeyArtifact"
 | extend KeyArtifact = parse_json(Entities)[0].KeyArtifact
@@ -44,7 +102,11 @@ search "*"
 | project Timestamp, KeyArtifact, Source, Destination, Source_IP, Destination_IP, Application
 | sort by Timestamp
 ```
-## Top 25 IPs interacting with the Artifacts
+
+### Top 25 IPs Interacting with the Artifact
+
+This query finds the top 25 source IP addresses interacting with the specified artifact.
+
 ```KQL
 | where Entities has "KeyArtifact"
 | extend KeyArtifact = parse_json(Entities)[0].KeyArtifact
@@ -53,7 +115,10 @@ search "*"
 | top 25
 ```
 
-## Admin Activity Tracker
+### Admin Activity Tracker
+
+This query tracks administrator activity based on key artifacts and provides relevant information in a concise table.
+
 ```KQL
 | where Entities has "KeyArtifact"
 | extend KeyArtifact = parse_json(Entities)[0].KeyArtifact
@@ -66,3 +131,7 @@ search "*"
 | project Timestamp, Username, Host, Process, CommandLine, Action
 | sort by Timestamp desc
 ```
+
+---
+
+This document serves as a reference guide for investigation and analysis purposes within Microsoft Sentinel, streamlining threat detection and pattern recognition using KQL.
