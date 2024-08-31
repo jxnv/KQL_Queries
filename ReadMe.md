@@ -131,7 +131,25 @@ This query tracks administrator activity based on key artifacts and provides rel
 | project Timestamp, Username, Host, Process, CommandLine, Action
 | sort by Timestamp desc
 ```
-
+### MFA Checker
+This query retrieves events related to MFA (success or failure) that contain the "KeyArtifact" field and provides detailed information about the event.
+```KQL
+| where Entities has "KeyArtifact"
+| extend KeyArtifact = parse_json(Entities)[0].KeyArtifact
+| extend Timestamp = TimeGenerated
+| extend Username = parse_json(Entities)[0].Username
+| extend Host = parse_json(Entities)[0].Host
+| extend Event = parse_json(Entities)[0].Event
+| extend Source = parse_json(Entities)[0].Source
+| extend IP = parse_json(Entities)[0].IP
+| extend Source_IP = parse_json(Entities)[0].Source_IP
+| extend Action = parse_json(Entities)[0].Action
+| extend Reason = parse_json(Entities)[0].Reason
+| extend Result = parse_json(Entities)[0].Result
+| extend Status = case(Result == "Success", "Success", Result == "Failure", "Failure", "Unknown")
+| summarize count() by Status, Timestamp, Username, Host, Event, Source, IP, Source_IP, Action, Reason, Result
+| sort by Timestamp desc
+```
 ---
 
 This document serves as a reference guide for investigation and analysis purposes within Microsoft Sentinel, streamlining threat detection and pattern recognition using KQL.
